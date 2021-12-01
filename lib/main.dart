@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:connectivity/connectivity.dart';
 import 'package:flutter/material.dart';
@@ -6,8 +7,12 @@ import 'package:flutter/services.dart';
 import 'package:wifi_iot/wifi_iot.dart';
 import 'package:wifi_connector/wifi_connector.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:app_settings/app_settings.dart';
 
 const String DEFAULT_SSID = 'id_fhkiel-';
+//const String DEFAULT_SSID = 'vivo';
 const NetworkSecurity STA_DEFAULT_SECURITY = NetworkSecurity.WPA;
 const String DEFAULT_PORT_ADDRESS = '192.168.4.1';
 
@@ -55,6 +60,10 @@ class _MyHomePageState extends State<MyHomePage> {
   late TextEditingController _hostnameController;
   late TextEditingController _CORSDomainController;
 
+  final Connectivity _connectivity = Connectivity();
+
+  final NetworkInfo _networkInfo = NetworkInfo();
+
   @override
   initState() {
     _aP1SSIdController = TextEditingController();
@@ -65,6 +74,8 @@ class _MyHomePageState extends State<MyHomePage> {
     _CORSDomainController = TextEditingController();
 
     _hostnameController.text = '%s-%04d';
+
+    initConnectivity();
 
     WiFiForIoTPlugin.isConnected().then((val) {
       _isConnectedToWiFi = val;
@@ -87,6 +98,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _checkSSID() async {
     bool _connectedToPlug = false;
     String? _ssid = await WiFiForIoTPlugin.getSSID();
+    String? _ssid2 = await _networkInfo.getWifiName();
+    print('_ssid = ' + _ssid!);
+    print('_ssid2 = ' + (_ssid2 ?? ''));
     if (_ssid != null && _ssid.contains(DEFAULT_SSID)) {
       _connectedToPlug = true;
     }
@@ -122,6 +136,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
+        ElevatedButton(
+          child: Text("WIFI"),
+          onPressed: () {
+            AppSettings.openWIFISettings();
+          },
+        ),
         MaterialButton(
           color: Colors.blue,
           child: Text("Scan", style: textStyle),
@@ -280,5 +300,42 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: kMaterialListPadding,
       children: htNetworks,
     );
+  }
+
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> initConnectivity() async {
+    ConnectivityResult result;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      result = await _connectivity.checkConnectivity();
+    } on PlatformException catch (e) {
+      print(e.toString());
+    }
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted) {
+      return Future.value(null);
+    }
+
+    // Check to see if Android Location permissions are enabled
+    // Described in https://github.com/flutter/flutter/issues/51529
+    if (Platform.isAndroid) {
+      print('Checking Android permissions');
+      var status = await Permission.location.status;
+      // Blocked?
+      if (status.isDenied || status.isRestricted) {
+        // Ask the user to unblock
+        if (await Permission.location.request().isGranted) {
+          // Either the permission was already granted before or the user just granted it.
+          print('Location permission granted');
+        } else {
+          print('Location permission not granted');
+        }
+      } else {
+        print('Permission already granted (previous execution?)');
+      }
+    }
   }
 }

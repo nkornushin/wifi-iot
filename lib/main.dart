@@ -271,7 +271,10 @@ class _MyHomePageState extends State<MyHomePage> {
       'h': _hostnameController.text,
       'c': _CORSDomainController.text,
     };
-    final uri = Uri.https(DEFAULT_PORT_ADDRESS, '/wi', queryParameters);
+    final uri = Uri.http(DEFAULT_PORT_ADDRESS, '/wi', queryParameters);
+    print('uri query = ' + uri.query);
+    print('uri path = ' + uri.path);
+    print('uri host = ' + uri.host);
     final response = await http.get(uri);
   }
 

@@ -81,8 +81,9 @@ class _MyHomePageState extends State<MyHomePage> {
       _isConnectedToWiFi = val;
     });
 
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) async {
       print(result);
+      await setCurrentSSID();
       if (result == ConnectivityResult.wifi) {
         _checkSSID();
       } else if (_isConnectedToPlug) {
@@ -117,7 +118,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> setCurrentSSID() async {
-    _currentSSID = (await WiFiForIoTPlugin.getSSID())!;
+    final String _SSID = (await WiFiForIoTPlugin.getSSID())!;
+    print('_currentSSID = ' + _SSID);
+    setState(() {
+      _currentSSID = _SSID;
+    });
   }
 
   @override
@@ -150,6 +155,13 @@ class _MyHomePageState extends State<MyHomePage> {
             setState(() {});
           },
         ),
+        ElevatedButton(
+          child: Text("Location"),
+          onPressed: () {
+            AppSettings.openLocationSettings();
+          },
+        ),
+        Text('currentSSID =' + _currentSSID),
         SizedBox(
           child: getFiWiPointsList(),
           height: 300,
@@ -323,11 +335,11 @@ class _MyHomePageState extends State<MyHomePage> {
     // Described in https://github.com/flutter/flutter/issues/51529
     if (Platform.isAndroid) {
       print('Checking Android permissions');
-      var status = await Permission.location.status;
+      var status = await Permission.locationAlways.status;
       // Blocked?
       if (status.isDenied || status.isRestricted) {
         // Ask the user to unblock
-        if (await Permission.location.request().isGranted) {
+        if (await Permission.locationAlways.request().isGranted) {
           // Either the permission was already granted before or the user just granted it.
           print('Location permission granted');
         } else {
